@@ -12,5 +12,6 @@
 * 聊天机器人组件     
 * ui及其他功能
 
-#### 准备使用的模型数据为:
-[Amazon question/answer data/Health and Personal Care](https://mcauleylab.ucsd.edu/public_datasets/data/amazon/qa/icdm/QA_Health_and_Personal_Care.json.gz)
+#### 使用的模型数据为:
+~~[Amazon question/answer data/Health and Personal Care](https://mcauleylab.ucsd.edu/public_datasets/data/amazon/qa/icdm/QA_Health_and_Personal_Care.json.gz)~~       
+最后选定的本地数据库为融合[Amazon question/answer data/Health and Personal Care](https://mcauleylab.ucsd.edu/public_datasets/data/amazon/qa/icdm/QA_Health_and_Personal_Care.json.gz)以及healthline数据再做筛选后的版本，详见[structured_qa.json](https://github.com/LIUUUUUZ/ARIN7102_2025_group3.1/blob/main/utilities/structured_qa.json)
