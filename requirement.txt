@@ -3,8 +3,9 @@ pytest==7.4.0
 pytest-cov==4.1.0
 requests==2.31.0
 pymongo
-streamlit==24.3.1
+streamlit==1.43.2
 st-chat-message
 openai
 langchain_openai
 langchain
+altair<5
