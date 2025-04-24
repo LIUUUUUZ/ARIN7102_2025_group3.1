@@ -2,6 +2,7 @@ import openai
 from openai import OpenAI
 from typing import Iterator, Dict, Any
 from utilities.rag import RAG, NextQuestionGenerator
+import json
 
 """
 The response example for deepseek-reasoner:
@@ -47,20 +48,23 @@ class ChatBot:
         api_key: str = "",
         init_prompt: str = "",
         model: str = "deepseek-reasoner",
-        api_base: str = "https://api.deepseek.com"
+        api_base: str = "https://api.deepseek.com",
+        rag: RAG = None,
+        biomarker_path="user_data/biomarker.json"
     ) -> None:
         self.client = OpenAI(
             base_url=api_base,
             api_key=api_key
         )
+        self.init_prompt = init_prompt
         self.model = model
         self.messages = [{
             "role": "system",
             "content": init_prompt
         }]
         self.abort_generation = False
-        self.rag = RAG(index_path="traing_data/qa_embeddings.index",
-                       qa_file_path="traing_data/structured_qa.json", top_k=3, min_similarity=0.75)
+        self.rag = rag
+        self.biomarker_path = biomarker_path
         self.nq = NextQuestionGenerator(
             api_key=api_key, base_url=api_base, model="deepseek-chat")
 
@@ -78,14 +82,23 @@ class ChatBot:
         else:
             raise ValueError()
 
-    def generate_response(self, human_input: str) -> Iterator[Dict[str, str]]:
+    def load_json(self, filename):
+        try:
+            with open(filename, 'r', encoding='utf-8') as f:
+                return json.dumps(json.load(f), indent=2)
+        except FileNotFoundError:
+            print(f"文件 {filename} 不存在")
+            return {}
+        except json.JSONDecodeError:
+            print("JSON格式错误")
+            return {}
+
+    def _chat(self, human_input: str) -> Iterator[Dict[str, str]]:
         self.abort_generation = False
-        human_input = self.rag.rag_query(human_input)
         self.messages.append({
             "role": "user",
             "content": human_input
         })
-
         full_response = ""
         full_reasoning = ""
 
@@ -117,6 +130,16 @@ class ChatBot:
 
         finally:
             self.abort_generation = False
+
+    def generate_response(self, human_input: str) -> Iterator[Dict[str, str]]:
+        human_input = self.rag.rag_query(human_input)
+        return self._chat(human_input)
+
+    def generate_response_with_biomarker(self, human_input: str) -> Iterator[Dict[str, str]]:
+        human_input = self.rag.rag_query(human_input)
+        biomarker = self.load_json(self.biomarker_path)
+        human_input += ("\n Except those reference, the following is some of the health metric of the user. I hope you can give more specific answer based on that. \n" + biomarker)
+        return self._chat(human_input)
 
     def generate_nq(self) -> list[str]:
         query = self.messages[-2].get("content")

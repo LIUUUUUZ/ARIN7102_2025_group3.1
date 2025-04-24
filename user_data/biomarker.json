@@ -1,0 +1,9 @@
+{
+    "blood_pressure": "120/80",
+    "heart_rate": 72,
+    "body_temp": 36.6,
+    "bmi": 22.0,
+    "glucose": 5.4,
+    "cholesterol": 4.5,
+    "hdl": 1.2
+}
