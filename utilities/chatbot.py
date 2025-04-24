@@ -1,6 +1,7 @@
 import openai
 from openai import OpenAI
 from typing import Iterator, Dict, Any
+from utilities.rag import RAG, NextQuestionGenerator
 
 """
 The response example for deepseek-reasoner:
@@ -58,6 +59,10 @@ class ChatBot:
             "content": init_prompt
         }]
         self.abort_generation = False
+        self.rag = RAG(index_path="traing_data/qa_embeddings.index",
+                       qa_file_path="traing_data/structured_qa.json", top_k=3, min_similarity=0.75)
+        self.nq = NextQuestionGenerator(
+            api_key=api_key, base_url=api_base, model="deepseek-chat")
 
     def _parse_chunk(self, chunk) -> Dict[str, str]:
         delta = chunk.choices[0].delta
@@ -75,6 +80,7 @@ class ChatBot:
 
     def generate_response(self, human_input: str) -> Iterator[Dict[str, str]]:
         self.abort_generation = False
+        human_input = self.rag.rag_query(human_input)
         self.messages.append({
             "role": "user",
             "content": human_input
@@ -111,6 +117,13 @@ class ChatBot:
 
         finally:
             self.abort_generation = False
+
+    def generate_nq(self) -> list[str]:
+        query = self.messages[-2].get("content")
+        answer = self.messages[-1].get("content")
+        result_nq = self.nq.generate_next_questions(
+            query, answer)
+        return result_nq
 
     def set_api_key(self, api_key: str) -> None:
         openai.api_key = api_key

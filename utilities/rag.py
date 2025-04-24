@@ -1,15 +1,19 @@
 import torch
 from sentence_transformers import SentenceTransformer
 import faiss
+from openai import OpenAI
 import numpy as np
 import json
 import os
+
+torch.classes.__path__ = []
+
 
 class RAG:
     def __init__(self, index_path, qa_file_path, model_name="paraphrase-MiniLM-L6-v2", top_k=5, min_similarity=0.75):
         """
         初始化RAG检索系统
-        
+
         参数:
             index_path: FAISS索引文件路径
             qa_file_path: 问答对JSON文件路径
@@ -18,16 +22,18 @@ class RAG:
             min_similarity: 最小相似度阈值，低于此值的结果将被过滤
         """
         # 设置设备（GPU或CPU）
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu")
         # 加载句子嵌入模型
-        self.model = SentenceTransformer(model_name).to(self.device)
+        self.model = SentenceTransformer(
+            model_name).to(self.device)
         self.qa_file_path = qa_file_path
         # 加载问答数据
         self.qa_pairs = self.load_qa_data(qa_file_path)
         # 设置默认参数
         self.top_k = top_k
         self.min_similarity = min_similarity
-        
+
         # 检查索引文件是否存在，不存在则重新训练
         if os.path.exists(index_path):
             self.index = self.load_faiss_index(index_path)
@@ -36,7 +42,7 @@ class RAG:
             # 编码所有问题
             questions = [item["question"] for item in self.qa_pairs]
             question_embeddings = self.generate_embeddings(questions)
-            
+
             # 构建并保存索引
             self.index = self.build_faiss_index(question_embeddings)
             faiss.write_index(self.index, index_path)
@@ -54,7 +60,8 @@ class RAG:
         """
         为文本列表生成嵌入向量
         """
-        embeddings = self.model.encode(texts, convert_to_tensor=True, device=self.device)
+        embeddings = self.model.encode(
+            texts, convert_to_tensor=True, device=self.device)
         # 归一化向量
         embeddings = embeddings / torch.norm(embeddings, dim=1, keepdim=True)
         return embeddings.cpu().numpy()
@@ -79,24 +86,26 @@ class RAG:
     def rag_query(self, query, top_k=None, min_similarity=None):
         """
         Execute RAG query, returning the most relevant QA pairs for the query
-        
+
         Parameters:
             query: User query text
             top_k: Number of most relevant results to return, uses default if None
             min_similarity: Minimum similarity threshold, uses default if None
-            
+
         Returns:
             Formatted user_prompt string containing original query and retrieved results
         """
         # Use default values or passed parameters
         top_k = top_k if top_k is not None else self.top_k
         min_similarity = min_similarity if min_similarity is not None else self.min_similarity
-        
+
         # Generate embedding vector for the query
-        query_embedding = self.model.encode([query], convert_to_tensor=True, device=self.device)
-        query_embedding = query_embedding / torch.norm(query_embedding, dim=1, keepdim=True)
+        query_embedding = self.model.encode(
+            [query], convert_to_tensor=True, device=self.device)
+        query_embedding = query_embedding / \
+            torch.norm(query_embedding, dim=1, keepdim=True)
         query_embedding = query_embedding.cpu().numpy()
-        
+
         # Search for the most similar questions
         distances, indices = self.index.search(query_embedding, top_k)
 
@@ -119,33 +128,35 @@ class RAG:
             user_prompt += f"Question: {result['question']}\n"
             user_prompt += f"Answer: {result['answer']}\n"
             user_prompt += f"Similarity: {result['similarity']:.4f}\n\n"
-        
+
         # Add guidance text
         user_prompt += "Please answer the user's query based on the reference information above. If the reference is irrevalent to the query, please answer the query based on your knowledge."
-        
+
         return user_prompt
-    
+
     def retrieve_top_questions(self, query, top_k=None, min_similarity=None):
         """
         检索与查询最相似的问题，返回结构化结果
-        
+
         参数:
             query: 用户查询文本
             top_k: 返回的最相关结果数量，如果为None则使用默认值
             min_similarity: 最小相似度阈值，如果为None则使用默认值
-            
+
         返回:
             包含相似问题、答案和相似度分数的列表
         """
         # 使用默认值或传入的参数
         top_k = top_k if top_k is not None else self.top_k
         min_similarity = min_similarity if min_similarity is not None else self.min_similarity
-        
+
         # 生成查询的嵌入向量
-        query_embedding = self.model.encode([query], convert_to_tensor=True, device=self.device)
-        query_embedding = query_embedding / torch.norm(query_embedding, dim=1, keepdim=True)
+        query_embedding = self.model.encode(
+            [query], convert_to_tensor=True, device=self.device)
+        query_embedding = query_embedding / \
+            torch.norm(query_embedding, dim=1, keepdim=True)
         query_embedding = query_embedding.cpu().numpy()
-        
+
         # 搜索最相似的问题
         distances, indices = self.index.search(query_embedding, top_k)
 
@@ -160,65 +171,47 @@ class RAG:
                     "answer": self.qa_pairs[idx]["answer"],
                     "similarity": similarity
                 })
-            
+
         return results
-    
-
-
-
 
 
 class NextQuestionGenerator:
     """
     基于用户查询和回答生成可能的后续问题
     """
-    def __init__(self, api_key_file="api_keys.json", base_url="https://api.deepseek.com", model="deepseek-chat"):
+
+    def __init__(self, api_key="", base_url="https://api.deepseek.com", model="deepseek-chat"):
         """
         初始化后续问题生成器
-        
+
         参数:
             api_key_file: 存储API密钥的JSON文件路径
             base_url: API基础URL
             model: 使用的模型名称
         """
         self.base_url = base_url
+        self.api_key = api_key
         self.model = model
-        self.client = None
-        self.load_api_key(api_key_file)
-        
-    def load_api_key(self, api_key_file):
-        """从JSON文件加载API密钥"""
-        try:
-            import json
-            from openai import OpenAI
-            
-            with open(api_key_file, 'r', encoding='utf-8') as f:
-                keys = json.load(f)
-                api_key = keys.get("deepseek_api_key", "")
-                
-            self.client = OpenAI(
-                api_key=api_key,
-                base_url=self.base_url
-            )
-        except Exception as e:
-            print(f"加载API密钥失败: {e}")
-            self.client = None
-    
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url=self.base_url
+        )
+
     def generate_next_questions(self, question, answer, n=3):
         """
         生成用户可能的后续问题
-        
+
         参数:
             question: 用户当前问题
             answer: 系统回答
             n: 生成的后续问题数量
-            
+
         返回:
             可能的后续问题列表
         """
         if not self.client:
             return ["无法生成后续问题：API客户端未初始化"]
-            
+
         user_prompt = f"""You are a helpful, empathetic, and knowledgeable health assistant.
 
         Your task is to thoughtfully analyze the following Q&A pair and creatively suggest {n} highly relevant and context-aware follow-up questions that the user might naturally ask next.
@@ -237,7 +230,8 @@ class NextQuestionGenerator:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a helpful and knowledgeable health chatbot."},
+                    {"role": "system",
+                        "content": "You are a helpful and knowledgeable health chatbot."},
                     {"role": "user", "content": user_prompt.strip()}
                 ],
                 temperature=0.7,
@@ -258,4 +252,3 @@ class NextQuestionGenerator:
         except Exception as e:
             print(f"API调用失败: {e}")
             return ["Error: Unable to generate next questions."]
-
