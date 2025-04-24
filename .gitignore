@@ -171,6 +171,4 @@ cython_debug/
 .pypirc
 test.ipynb
 .vscode/launch.json
-traing_data/qa_embeddings.index
 utilities/structured_qa.json
-traing_data/structured_qa.json
