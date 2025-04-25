@@ -18,7 +18,7 @@
 
 #### 启动方法
 1. 将代码clone到本地后，根据environment.yml安装所需要的环境
-2. 根目录下创建traing_data文件夹，将训练好的数据集（qa_embeddnigs.index,structured_qa.json）放入其中。如果你是第一次运行的话，可以在根目录下在conda中启动python运行
+2.  (这一步不用)根目录下创建traing_data文件夹，将训练好的数据集（qa_embeddnigs.index,structured_qa.json）放入其中。如果你是第一次运行的话，可以在根目录下在conda中启动python运行
 ```python
 from from utilities.rag import RAG, NextQuestionGenerator
 
