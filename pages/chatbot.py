@@ -52,7 +52,7 @@ required_states = {
     "is_responding": False,
     "has_suggestions": False,
     "enable_biomarker": False,
-    "enable_rag": True  # 默认启用RAG
+    "enable_rag": False  # 默认不启用RAG
 }
 
 for key, default_value in required_states.items():
