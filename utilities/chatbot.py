@@ -131,15 +131,17 @@ class ChatBot:
         finally:
             self.abort_generation = False
 
-    def generate_response(self, human_input: str) -> Iterator[Dict[str, str]]:
-        human_input = self.rag.rag_query(human_input)
-        return self._chat(human_input)
+    def generate_response(self, human_input: str, use_rag: bool = True) -> Iterator[Dict[str, str]]:
+        if use_rag:
+            human_input = self.rag.rag_query(human_input)
+        return self._chat(human_input, use_rag)
 
-    def generate_response_with_biomarker(self, human_input: str) -> Iterator[Dict[str, str]]:
-        human_input = self.rag.rag_query(human_input)
+    def generate_response_with_biomarker(self, human_input: str, use_rag: bool = True) -> Iterator[Dict[str, str]]:
+        if use_rag:
+            human_input = self.rag.rag_query(human_input)
         biomarker = self.load_json(self.biomarker_path)
         human_input += ("\n Except those reference, the following is some of the health metric of the user. I hope you can give more specific answer based on that. \n" + biomarker)
-        return self._chat(human_input)
+        return self._chat(human_input, use_rag)
 
     def generate_nq(self) -> list[str]:
         query = self.messages[-2].get("content")

@@ -51,7 +51,8 @@ required_states = {
     "is_processing": False,
     "is_responding": False,
     "has_suggestions": False,
-    "enable_biomarker": False
+    "enable_biomarker": False,
+    "enable_rag": True  # 默认启用RAG
 }
 
 for key, default_value in required_states.items():
@@ -72,10 +73,12 @@ if st.session_state.username == "admin":
 
 chat_container = st.container()
 with chat_container:
-    col1, col2 = st.columns([4, 1])
+    col1, col2, col3 = st.columns([3, 1, 1])
     with col1:
         st.write("## 🤖 💬 ChatBot")
     with col2:
+        st.toggle("Enable RAG", key="enable_rag", value=st.session_state.enable_rag)
+    with col3:
         if len(st.session_state.messages) > 1:
             st.button("🗑️ Clear Chat", on_click=clear_message)
 
@@ -139,11 +142,13 @@ if st.session_state.is_processing:
     try:
         if not st.session_state.enable_biomarker:
             st.session_state.current_stream = st.session_state.chat_bot.generate_response(
-                st.session_state.messages[-1]["content"]
+                st.session_state.messages[-1]["content"],
+                use_rag=st.session_state.enable_rag
             )
         else:
             st.session_state.current_stream = st.session_state.chat_bot.generate_response_with_biomarker(
-                st.session_state.messages[-1]["content"]
+                st.session_state.messages[-1]["content"],
+                use_rag=st.session_state.enable_rag
             )
 
         st.session_state.messages.extend([
