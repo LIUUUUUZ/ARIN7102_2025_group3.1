@@ -93,7 +93,7 @@ class ChatBot:
             print("JSON格式错误")
             return {}
 
-    def _chat(self, human_input: str) -> Iterator[Dict[str, str]]:
+    def _chat(self, human_input: str, use_rag: bool = True) -> Iterator[Dict[str, str]]:
         self.abort_generation = False
         self.messages.append({
             "role": "user",

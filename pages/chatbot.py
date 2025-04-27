@@ -52,7 +52,7 @@ required_states = {
     "is_responding": False,
     "has_suggestions": False,
     "enable_biomarker": False,
-    "enable_rag": False  # 默认不启用RAG
+    "enable_rag": False
 }
 
 for key, default_value in required_states.items():
@@ -77,7 +77,7 @@ with chat_container:
     with col1:
         st.write("## 🤖 💬 ChatBot")
     with col2:
-        st.toggle("Enable RAG", key="enable_rag", value=st.session_state.enable_rag)
+        st.toggle("Enable RAG", key="enable_rag")
     with col3:
         if len(st.session_state.messages) > 1:
             st.button("🗑️ Clear Chat", on_click=clear_message)
